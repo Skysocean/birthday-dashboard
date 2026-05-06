@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>🎂 Birthday Box LIVE Dashboard</title>
+
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+<style>
+  body {
+    font-family: Arial;
+    background: #0f0f0f;
+    color: white;
+    text-align: center;
+    padding: 20px;
+  }
+
+  h1 {
+    color: gold;
+  }
+
+  .btn {
+    padding: 15px 25px;
+    margin: 10px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  .on { background: green; }
+  .off { background: red; }
+  .play { background: orange; }
+
+  input {
+    padding: 10px;
+    width: 250px;
+    border-radius: 8px;
+    border: none;
+  }
+
+  #log {
+    background: #1c1c1c;
+    height: 200px;
+    overflow-y: auto;
+    padding: 10px;
+    margin-top: 20px;
+    text-align: left;
+  }
+
+  .statusBox {
+    margin-top: 15px;
+    font-size: 18px;
+  }
+
+  .dot {
+    height: 12px;
+    width: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+  }
+
+  .green { background: lime; }
+  .red { background: red; }
+  .yellow { background: orange; }
+</style>
+</head>
+
+<body>
+
+<h1>🎂 SMART BIRTHDAY BOX CONTROL</h1>
+
+<div class="statusBox">
+  Connection:
+  <span id="connDot" class="dot red"></span>
+  <span id="connText">Disconnected</span>
+</div>
+
+<div class="statusBox">
+  Device State:
+  <b id="deviceState">UNKNOWN</b>
+</div>
+
+<br>
+
+<button class="btn on" onclick="send('birthday/control','ON')">ON</button>
+<button class="btn off" onclick="send('birthday/control','OFF')">OFF</button>
+<button class="btn play" onclick="send('birthday/control','PLAY')">PLAY 🎵</button>
+
+<br><br>
+
+<input id="msg" placeholder="Send OLED message">
+<button class="btn" onclick="sendMessage()">Send</button>
+
+<div id="log"></div>
+
+<script>
+
+const broker = "wss://broker.hivemq.com:8884/mqtt";
+const client = mqtt.connect(broker);
+
+const controlTopic = "birthday/control";
+const messageTopic = "birthday/message";
+const statusTopic = "birthday/status";
+
+const logBox = document.getElementById("log");
+const connDot = document.getElementById("connDot");
+const connText = document.getElementById("connText");
+const deviceState = document.getElementById("deviceState");
+
+function log(msg) {
+  let p = document.createElement("div");
+  p.innerHTML = msg;
+  logBox.appendChild(p);
+  logBox.scrollTop = logBox.scrollHeight;
+}
+
+function setStatus(state) {
+  deviceState.innerText = state;
+
+  if (state === "PLAYING") deviceState.style.color = "orange";
+  else if (state === "IDLE") deviceState.style.color = "lime";
+  else if (state === "OFF") deviceState.style.color = "red";
+  else deviceState.style.color = "white";
+}
+
+// ================= MQTT EVENTS =================
+client.on("connect", () => {
+  connDot.className = "dot green";
+  connText.innerText = "Connected";
+
+  client.subscribe(statusTopic);
+
+  log("✅ Connected to MQTT broker");
+});
+
+client.on("message", (topic, message) => {
+
+  let msg = message.toString();
+
+  if (topic === statusTopic) {
+    setStatus(msg);
+  }
+
+  log("📩 " + topic + " → " + msg);
+});
+
+client.on("close", () => {
+  connDot.className = "dot red";
+  connText.innerText = "Disconnected";
+});
+
+// ================= SEND =================
+function send(topic, msg) {
+  client.publish(topic, msg);
+  log("📤 " + msg);
+}
+
+function sendMessage() {
+  let m = document.getElementById("msg").value;
+  if (!m) return;
+
+  client.publish(messageTopic, m);
+  log("📤 Message: " + m);
+}
+
+</script>
+
+</body>
+</html>
