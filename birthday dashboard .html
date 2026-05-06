@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>🎂 Birthday Box Dashboard</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #111;
+      color: #fff;
+      text-align: center;
+      padding: 30px;
+    }
+
+    h1 {
+      color: #ffcc00;
+    }
+
+    button {
+      padding: 15px 25px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      cursor: pointer;
+    }
+
+    .on { background: green; color: white; }
+    .off { background: red; color: white; }
+    .play { background: orange; color: black; }
+
+    input {
+      padding: 10px;
+      width: 300px;
+      border-radius: 8px;
+      border: none;
+    }
+
+    #log {
+      margin-top: 20px;
+      background: #222;
+      padding: 15px;
+      height: 200px;
+      overflow-y: scroll;
+      border-radius: 10px;
+      text-align: left;
+    }
+  </style>
+
+</head>
+
+<body>
+
+<h1>🎂 Smart Birthday Box</h1>
+
+<h2>Control</h2>
+<button class="on" onclick="sendControl('ON')">ON</button>
+<button class="off" onclick="sendControl('OFF')">OFF</button>
+<button class="play" onclick="sendControl('PLAY')">PLAY 🎵</button>
+
+<h2>Send Message to OLED</h2>
+<input type="text" id="msg" placeholder="Enter message..." />
+<button onclick="sendMessage()">Send</button>
+
+<h2>Status / Logs</h2>
+<div id="log"></div>
+
+<script>
+  const broker = "wss://broker.hivemq.com:8884/mqtt";
+  const client = mqtt.connect(broker);
+
+  const topicControl = "birthday/control";
+  const topicMessage = "birthday/message";
+
+  const logDiv = document.getElementById("log");
+
+  function log(msg) {
+    const p = document.createElement("p");
+    p.textContent = msg;
+    logDiv.appendChild(p);
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  client.on("connect", () => {
+    log("✅ Connected to HiveMQ broker");
+
+    client.subscribe(topicControl);
+    client.subscribe(topicMessage);
+  });
+
+  client.on("message", (topic, message) => {
+    log("📩 " + topic + " → " + message.toString());
+  });
+
+  function sendControl(cmd) {
+    client.publish(topicControl, cmd);
+    log("📤 Sent control: " + cmd);
+  }
+
+  function sendMessage() {
+    const msg = document.getElementById("msg").value;
+    if (msg.trim() === "") return;
+
+    client.publish(topicMessage, msg);
+    log("📤 Sent message: " + msg);
+  }
+</script>
+
+</body>
+</html>
